@@ -1,12 +1,6 @@
 package com.example.twitchwatch
 
-import android.content.ComponentName
-import android.content.Context
-import android.content.Intent
-import android.content.ServiceConnection
 import android.os.Bundle
-import android.os.IBinder
-import android.util.Log
 import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
@@ -17,16 +11,7 @@ import androidx.core.view.WindowInsetsCompat
 
 class MainActivity : AppCompatActivity() {
 
-    private var ircService: TwitchIrcService? = null
-    private var bound = false
-
-    private val connection = object : ServiceConnection {
-        override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
-            ircService = (binder as TwitchIrcService.LocalBinder).getService()
-            bound = true
-        }
-        override fun onServiceDisconnected(name: ComponentName?) { bound = false }
-    }
+    private var ircClient: TwitchIrcClient? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -42,29 +27,25 @@ class MainActivity : AppCompatActivity() {
         val connectButton = findViewById<Button>(R.id.connectButton)
         val statusText = findViewById<TextView>(R.id.statusText)
 
-        Intent(this, TwitchIrcService::class.java).also { intent ->
-            startService(intent)
-            bindService(intent, connection, Context.BIND_AUTO_CREATE)
-        }
-
         connectButton.setOnClickListener {
             val channel = channelInput.text.toString().trim().lowercase()
             if (channel.isEmpty()) return@setOnClickListener
 
-            ircService?.setChannel(channel)
-            ircService?.onNewMessage = { msg ->
-                Log.d("CHAT", "${msg.author}: ${msg.text}")
+            ircClient?.disconnect()
+            statusText.text = "Conectare la #$channel..."
+
+            ircClient = TwitchIrcClient(channel) { msg ->
                 runOnUiThread {
-                    statusText.text = "Live: #$channel"
+                    statusText.text = "Live: #$channel — ${msg.author}: ${msg.text}"
                 }
                 WearDataBridge.sendMessage(applicationContext, msg.author, msg.text, msg.color)
             }
-            statusText.text = "Se conectează la #$channel..."
+            ircClient?.connect()
         }
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        if (bound) unbindService(connection)
+        ircClient?.disconnect()
     }
 }

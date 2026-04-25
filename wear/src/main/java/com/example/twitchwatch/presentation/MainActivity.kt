@@ -1,51 +1,88 @@
-package com.example.twitchwatch
+package com.example.twitchwatch.presentation
 
 import android.os.Bundle
-import android.widget.Button
-import android.widget.EditText
-import android.widget.TextView
-import androidx.activity.enableEdgeToEdge
-import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
+import androidx.wear.compose.foundation.lazy.itemsIndexed
+import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
+import androidx.wear.compose.material3.AppScaffold
+import androidx.wear.compose.material3.Text
+import com.example.twitchwatch.presentation.theme.TwitchWatchTheme
 
-class MainActivity : AppCompatActivity() {
-
-    private var ircClient: TwitchIrcClient? = null
-
+class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
-        setContentView(R.layout.activity_main)
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets
-        }
-
-        val channelInput = findViewById<EditText>(R.id.channelInput)
-        val connectButton = findViewById<Button>(R.id.connectButton)
-        val statusText = findViewById<TextView>(R.id.statusText)
-
-        connectButton.setOnClickListener {
-            val channel = channelInput.text.toString().trim().lowercase()
-            if (channel.isEmpty()) return@setOnClickListener
-
-            ircClient?.disconnect()
-            statusText.text = "Conectare la #$channel..."
-
-            ircClient = TwitchIrcClient(channel) { msg ->
-                runOnUiThread {
-                    statusText.text = "Live: #$channel — ${msg.author}: ${msg.text}"
+        setContent {
+            TwitchWatchTheme {
+                AppScaffold {
+                    ChatScreen()
                 }
-                WearDataBridge.sendMessage(applicationContext, msg.author, msg.text, msg.color)
             }
-            ircClient?.connect()
+        }
+    }
+}
+
+@Composable
+fun ChatScreen() {
+    val messages = ChatRepository.messages
+    val listState = rememberScalingLazyListState()
+
+    LaunchedEffect(messages.size) {
+        if (messages.isNotEmpty()) {
+            listState.animateScrollToItem(messages.size)
         }
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        ircClient?.disconnect()
+    ScalingLazyColumn(
+        state = listState,
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+            .padding(horizontal = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(3.dp)
+    ) {
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 20.dp, bottom = 6.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "● LIVE",
+                    color = Color(0xFF9147FF),
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+
+        itemsIndexed(messages) { _, msg ->
+            Row(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = msg.author,
+                    color = Color(android.graphics.Color.parseColor(msg.color)),
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = ": ${msg.text}",
+                    color = Color(0xFFCCCCCC),
+                    fontSize = 9.sp,
+                    modifier = Modifier.padding(start = 2.dp)
+                )
+            }
+        }
     }
 }
