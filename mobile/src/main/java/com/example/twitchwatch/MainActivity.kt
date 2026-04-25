@@ -1,14 +1,19 @@
 package com.example.twitchwatch
 
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.content.ServiceConnection
 import android.os.Bundle
+import android.os.IBinder
+import android.util.Log
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
+import androidx.core.content.ContextCompat
 
 class MainActivity : AppCompatActivity() {
 
-    private var ircService:  .TwitchIrcService? = null
+    private var ircService: TwitchIrcService? = null
     private var bound = false
 
     private val connection = object : ServiceConnection {
@@ -28,7 +33,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         Intent(this, TwitchIrcService::class.java).also { intent ->
-            startService(intent)
+            ContextCompat.startForegroundService(this, intent)
             bindService(intent, connection, Context.BIND_AUTO_CREATE)
         }
     }

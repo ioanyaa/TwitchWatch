@@ -1,25 +1,32 @@
 package com.example.twitchwatch
 
 import android.app.Service
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.os.Build
 import android.content.Intent
 import android.os.Binder
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.util.Log
+import androidx.core.app.NotificationCompat
 import okhttp3.*
 
 class TwitchIrcService : Service() {
 
     private val client = OkHttpClient()
     private var webSocket: WebSocket? = null
+    private var started = false
 
-    // TODO: înlocuiește cu OAuth mai târziu
+    private val notificationId = 1001
+    private val notificationChannelId = "twitch_irc"
+
+    // TODO: replace with OAuth later
     private val token = "oauth:TOKENUL_TAU"
     private val nick = "USERUL_TAU"
     private val channel = "#CHANNELUL_TAU"
 
-    // Binder ca MainActivity să poată asculta mesaje
     inner class LocalBinder : Binder() {
         fun getService() = this@TwitchIrcService
     }
@@ -30,11 +37,17 @@ class TwitchIrcService : Service() {
     override fun onBind(intent: Intent?): IBinder = binder
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        connect()
+        ensureForeground()
+        if (!started) {
+            started = true
+            connect()
+        }
         return START_STICKY
     }
 
     fun connect() {
+        webSocket?.cancel()
+
         val request = Request.Builder()
             .url("wss://irc-ws.chat.twitch.tv:443")
             .build()
@@ -46,7 +59,7 @@ class TwitchIrcService : Service() {
                 ws.send("PASS $token")
                 ws.send("NICK $nick")
                 ws.send("JOIN $channel")
-                Log.d("IRC", "Conectat la $channel")
+                Log.d("IRC", "Connected to $channel")
             }
 
             override fun onMessage(ws: WebSocket, text: String) {
@@ -55,21 +68,46 @@ class TwitchIrcService : Service() {
                         line.contains("PRIVMSG") -> handleChat(line)
                         line.startsWith("PING") -> {
                             ws.send("PONG :tmi.twitch.tv")
-                            Log.d("IRC", "PONG trimis")
+                            Log.d("IRC", "PONG sent")
                         }
                     }
                 }
             }
 
             override fun onFailure(ws: WebSocket, t: Throwable, response: Response?) {
-                Log.e("IRC", "Eroare: ${t.message}")
+                Log.e("IRC", "Error: ${t.message}")
                 Handler(Looper.getMainLooper()).postDelayed({ connect() }, 5000)
             }
 
             override fun onClosed(ws: WebSocket, code: Int, reason: String) {
-                Log.d("IRC", "Închis: $reason")
+                Log.d("IRC", "Closed: $reason")
             }
         })
+    }
+
+    private fun ensureForeground() {
+        val nm = getSystemService(NotificationManager::class.java) ?: return
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val existing = nm.getNotificationChannel(notificationChannelId)
+            if (existing == null) {
+                val channel = NotificationChannel(
+                    notificationChannelId,
+                    "Twitch IRC",
+                    NotificationManager.IMPORTANCE_LOW
+                )
+                nm.createNotificationChannel(channel)
+            }
+        }
+
+        val notification = NotificationCompat.Builder(this, notificationChannelId)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle("Twitch chat connected")
+            .setContentText("Listening to $channel")
+            .setOngoing(true)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .build()
+
+        startForeground(notificationId, notification)
     }
 
     private fun handleChat(line: String) {
@@ -95,8 +133,9 @@ class TwitchIrcService : Service() {
     }
 
     override fun onDestroy() {
-        webSocket?.close(1000, "Service oprit")
+        webSocket?.close(1000, "Service stopped")
         client.dispatcher.executorService.shutdown()
+        started = false
     }
 }
 
