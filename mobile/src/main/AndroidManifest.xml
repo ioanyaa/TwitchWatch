@@ -4,6 +4,11 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+
+    <uses-feature
+        android:name="android.hardware.type.watch"
+        android:required="false" />
 
     <application
         android:allowBackup="true"
@@ -15,21 +20,19 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.TwitchWatch">
 
-        <service
-            android:name=".TwitchIrcService"
-            android:exported="false"
-            android:foregroundServiceType="dataSync" />
-
         <activity
             android:name=".MainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-    </application>
 
+        <service
+            android:name=".TwitchIrcService"
+            android:foregroundServiceType="dataSync" />
+
+    </application>
 
 </manifest>

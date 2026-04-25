@@ -7,9 +7,13 @@ import android.content.ServiceConnection
 import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
+import android.widget.Button
+import android.widget.EditText
+import android.widget.TextView
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 
 class MainActivity : AppCompatActivity() {
 
@@ -19,9 +23,6 @@ class MainActivity : AppCompatActivity() {
     private val connection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
             ircService = (binder as TwitchIrcService.LocalBinder).getService()
-            ircService?.onNewMessage = { msg ->
-                Log.d("CHAT", "${msg.author}: ${msg.text}")
-            }
             bound = true
         }
         override fun onServiceDisconnected(name: ComponentName?) { bound = false }
@@ -31,10 +32,32 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            insets
+        }
+
+        val channelInput = findViewById<EditText>(R.id.channelInput)
+        val connectButton = findViewById<Button>(R.id.connectButton)
+        val statusText = findViewById<TextView>(R.id.statusText)
 
         Intent(this, TwitchIrcService::class.java).also { intent ->
-            ContextCompat.startForegroundService(this, intent)
+            startService(intent)
             bindService(intent, connection, Context.BIND_AUTO_CREATE)
+        }
+
+        connectButton.setOnClickListener {
+            val channel = channelInput.text.toString().trim().lowercase()
+            if (channel.isEmpty()) return@setOnClickListener
+
+            ircService?.setChannel(channel)
+            ircService?.onNewMessage = { msg ->
+                Log.d("CHAT", "${msg.author}: ${msg.text}")
+                runOnUiThread {
+                    statusText.text = "Live: #$channel"
+                }
+            }
         }
     }
 

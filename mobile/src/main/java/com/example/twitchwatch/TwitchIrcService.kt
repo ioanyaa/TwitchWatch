@@ -1,8 +1,7 @@
 package com.example.twitchwatch
 
 import android.app.Service
-import android.app.NotificationChannel
-import android.app.NotificationManager
+
 import android.os.Build
 import android.content.Intent
 import android.os.Binder
@@ -10,7 +9,7 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.util.Log
-import androidx.core.app.NotificationCompat
+
 import okhttp3.*
 
 class TwitchIrcService : Service() {
@@ -23,9 +22,8 @@ class TwitchIrcService : Service() {
     private val notificationChannelId = "twitch_irc"
 
     // TODO: replace with OAuth later
-    private val token = "oauth:TOKENUL_TAU"
-    private val nick = "USERUL_TAU"
-    private val channel = "#CHANNELUL_TAU"
+    private val nick = "justinfan${(10000..99999).random()}"
+    private var channel = "#xqc"  // default, se schimbă din UI
 
     inner class LocalBinder : Binder() {
         fun getService() = this@TwitchIrcService
@@ -37,7 +35,6 @@ class TwitchIrcService : Service() {
     override fun onBind(intent: Intent?): IBinder = binder
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        ensureForeground()
         if (!started) {
             started = true
             connect()
@@ -56,7 +53,6 @@ class TwitchIrcService : Service() {
 
             override fun onOpen(ws: WebSocket, response: Response) {
                 ws.send("CAP REQ :twitch.tv/tags twitch.tv/commands")
-                ws.send("PASS $token")
                 ws.send("NICK $nick")
                 ws.send("JOIN $channel")
                 Log.d("IRC", "Connected to $channel")
@@ -85,30 +81,6 @@ class TwitchIrcService : Service() {
         })
     }
 
-    private fun ensureForeground() {
-        val nm = getSystemService(NotificationManager::class.java) ?: return
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val existing = nm.getNotificationChannel(notificationChannelId)
-            if (existing == null) {
-                val channel = NotificationChannel(
-                    notificationChannelId,
-                    "Twitch IRC",
-                    NotificationManager.IMPORTANCE_LOW
-                )
-                nm.createNotificationChannel(channel)
-            }
-        }
-
-        val notification = NotificationCompat.Builder(this, notificationChannelId)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setContentTitle("Twitch chat connected")
-            .setContentText("Listening to $channel")
-            .setOngoing(true)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .build()
-
-        startForeground(notificationId, notification)
-    }
 
     private fun handleChat(line: String) {
         val author = line.substringAfter(":").substringBefore("!")
@@ -136,6 +108,11 @@ class TwitchIrcService : Service() {
         webSocket?.close(1000, "Service stopped")
         client.dispatcher.executorService.shutdown()
         started = false
+    }
+    fun setChannel(newChannel: String) {
+        channel = "#$newChannel"
+        started = false
+        connect()
     }
 }
 
