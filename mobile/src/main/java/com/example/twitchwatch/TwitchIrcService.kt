@@ -96,6 +96,9 @@ class TwitchIrcService : Service() {
 
         Log.d("IRC", "${chatMessage.author}: ${chatMessage.text}")
         onNewMessage(chatMessage)
+
+        // trimite spre ceas
+        WearDataBridge.sendMessage(applicationContext, author, message, color)
     }
 
     private fun extractTag(line: String, tag: String): String {
