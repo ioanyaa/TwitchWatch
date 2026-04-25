@@ -47,4 +47,7 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.google.android.gms:play-services-wearable:18.1.0")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("io.ktor:ktor-server-netty:2.3.7")
+    implementation("io.ktor:ktor-server-core:2.3.7")
 }
