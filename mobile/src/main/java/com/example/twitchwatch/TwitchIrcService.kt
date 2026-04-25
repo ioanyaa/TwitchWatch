@@ -52,10 +52,10 @@ class TwitchIrcService : Service() {
         webSocket = client.newWebSocket(request, object : WebSocketListener() {
 
             override fun onOpen(ws: WebSocket, response: Response) {
+                Log.d("IRC", "onOpen - joining $channel")
                 ws.send("CAP REQ :twitch.tv/tags twitch.tv/commands")
                 ws.send("NICK $nick")
                 ws.send("JOIN $channel")
-                Log.d("IRC", "Connected to $channel")
             }
 
             override fun onMessage(ws: WebSocket, text: String) {
@@ -79,6 +79,7 @@ class TwitchIrcService : Service() {
                 Log.d("IRC", "Closed: $reason")
             }
         })
+
     }
 
 

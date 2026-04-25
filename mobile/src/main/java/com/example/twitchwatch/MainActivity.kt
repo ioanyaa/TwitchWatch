@@ -57,7 +57,9 @@ class MainActivity : AppCompatActivity() {
                 runOnUiThread {
                     statusText.text = "Live: #$channel"
                 }
+                WearDataBridge.sendMessage(applicationContext, msg.author, msg.text, msg.color)
             }
+            statusText.text = "Se conectează la #$channel..."
         }
     }
 
