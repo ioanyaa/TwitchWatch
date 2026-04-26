@@ -1,0 +1,68 @@
+{
+  "project_info": {
+    "project_number": "480001009592",
+    "firebase_url": "https://guardian-52f70-default-rtdb.europe-west1.firebasedatabase.app",
+    "project_id": "guardian-52f70",
+    "storage_bucket": "guardian-52f70.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:480001009592:android:7286fddda8e426797e914d",
+        "android_client_info": {
+          "package_name": "com.example.guardianelder"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAkM2bluUFH-8gkWbEhnRiaD-35Xa0dZV0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:480001009592:android:4db056041e748d647e914d",
+        "android_client_info": {
+          "package_name": "com.example.guardianwavewatch"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAkM2bluUFH-8gkWbEhnRiaD-35Xa0dZV0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:480001009592:android:f830ceb49622e1387e914d",
+        "android_client_info": {
+          "package_name": "com.example.twitchwatch"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAkM2bluUFH-8gkWbEhnRiaD-35Xa0dZV0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

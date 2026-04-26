@@ -1,6 +1,12 @@
 package com.example.twitchwatch
 
 import android.util.Log
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.ServerValue
+import com.google.firebase.database.ValueEventListener
+import com.google.firebase.database.ktx.database
+import com.google.firebase.ktx.Firebase
 import okhttp3.*
 
 class TwitchIrcClient(
@@ -9,6 +15,8 @@ class TwitchIrcClient(
 ) {
     private val client = OkHttpClient()
     private var webSocket: WebSocket? = null
+    private val db = Firebase.database.reference
+    private val USER_ID = "demo_user_1"
 
     fun connect() {
         val nick = "justinfan${(10000..99999).random()}"
@@ -32,6 +40,7 @@ class TwitchIrcClient(
                             if (author.isNotEmpty() && message.isNotEmpty()) {
                                 Log.d("IRC", "$author: $message")
                                 onMessage(ChatMessage(author, message, "#9147FF"))
+                                processCommand(message.lowercase())
                             }
                         }
                         line.startsWith("PING") -> ws.send("PONG :tmi.twitch.tv")
@@ -46,6 +55,41 @@ class TwitchIrcClient(
             override fun onClosed(ws: WebSocket, code: Int, reason: String) {
                 Log.d("IRC", "Closed: $reason")
             }
+        })
+    }
+
+    private fun processCommand(message: String) {
+        when {
+            message.contains("bea apa") || message.contains("!water") -> {
+                incrementCount("hydration/count")
+                Log.d("IRC", "Bea apa detectat! +1")
+            }
+            message.contains("do squats") || message.contains("!squat") -> {
+                incrementCount("squats/count")
+                Log.d("IRC", "Squat detectat! +1")
+            }
+            message.contains("just subscribed") ||
+                    message.contains("just gifted") ||
+                    message.contains("subscribed with") -> {
+                db.child("users/$USER_ID/notification").setValue(
+                    mapOf(
+                        "type" to "SUB",
+                        "timestamp" to ServerValue.TIMESTAMP
+                    )
+                )
+                Log.d("IRC", "Sub detectat → vibratie ceas")
+            }
+        }
+    }
+
+    private fun incrementCount(path: String) {
+        val ref = db.child("users/$USER_ID/$path")
+        ref.addListenerForSingleValueEvent(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val current = snapshot.getValue(Int::class.java) ?: 0
+                ref.setValue(current + 1)
+            }
+            override fun onCancelled(error: DatabaseError) {}
         })
     }
 

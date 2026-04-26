@@ -1,6 +1,7 @@
 package com.example.twitchwatch
 
 import android.os.Bundle
+import android.util.Log
 import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
@@ -27,8 +28,6 @@ class MainActivity : AppCompatActivity() {
         val connectButton = findViewById<Button>(R.id.connectButton)
         val statusText = findViewById<TextView>(R.id.statusText)
 
-        ChatServer.start()
-
         connectButton.setOnClickListener {
             val channel = channelInput.text.toString().trim().lowercase()
             if (channel.isEmpty()) return@setOnClickListener
@@ -40,7 +39,12 @@ class MainActivity : AppCompatActivity() {
                 runOnUiThread {
                     statusText.text = "Live: #$channel — ${msg.author}: ${msg.text}"
                 }
-                ChatServer.broadcast(msg.author, msg.text, msg.color)
+                WearDataBridge.sendMessage(
+                    this@MainActivity,
+                    msg.author,
+                    msg.text,
+                    msg.color
+                )
             }
             ircClient?.connect()
         }
@@ -49,6 +53,5 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         ircClient?.disconnect()
-        ChatServer.stop()
     }
 }
