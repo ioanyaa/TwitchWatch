@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: transparent;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  width: 100vw; height: 100vh;
+  overflow: hidden;
+  pointer-events: none;
+  position: relative;
+}
+#hr-widget {
+  position: absolute; top: 16px; left: 16px;
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(14,14,20,0.85);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px; padding: 8px 14px;
+  transition: opacity 0.4s, border-color 0.4s, background 0.4s;
+}
+#hr-widget.hidden { opacity: 0; }
+#hr-icon { font-size: 24px; }
+#hr-icon.beat { animation: heartbeat 0.35s ease-out; }
+@keyframes heartbeat {
+  0% { transform: scale(1); } 40% { transform: scale(1.35); } 100% { transform: scale(1); }
+}
+#hr-value { font-size: 28px; font-weight: 700; color: white; min-width: 52px; }
+#hr-label { font-size: 10px; color: rgba(255,255,255,0.4); }
+#hr-widget.warning { border-color: #f97316; }
+#hr-widget.critical { border-color: #ef4444; background: rgba(239,68,68,0.15); }
+#hr-widget.warning #hr-value { color: #f97316; }
+#hr-widget.critical #hr-value { color: #ef4444; }
+
+#squat-widget {
+  position: absolute; top: 16px; right: 16px;
+  display: flex; flex-direction: column; align-items: center;
+  background: rgba(14,14,20,0.85);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px; padding: 8px 16px; min-width: 80px;
+  opacity: 0; transition: opacity 0.4s;
+}
+#squat-widget.visible { opacity: 1; }
+#squat-count { font-size: 32px; font-weight: 800; color: white; }
+#squat-done { font-size: 13px; color: rgba(255,255,255,0.5); margin-top: 2px; }
+#squat-label { font-size: 10px; color: rgba(255,255,255,0.4); margin-top: 4px; }
+#squat-count.pop { animation: pop 0.25s cubic-bezier(.22,.68,0,1.5); }
+@keyframes pop {
+  0% { transform: scale(1); } 60% { transform: scale(1.4); } 100% { transform: scale(1); }
+}
+
+#water-widget {
+  position: absolute; bottom: 16px; left: 16px;
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(14,14,20,0.85);
+  border: 1px solid rgba(56,189,248,0.3);
+  border-radius: 10px; padding: 8px 14px;
+  opacity: 0; transition: opacity 0.4s;
+}
+#water-widget.visible { opacity: 1; }
+#water-count { font-size: 20px; font-weight: 700; color: #38bdf8; min-width: 28px; }
+#water-label { font-size: 10px; color: rgba(255,255,255,0.4); }
+#water-count.pop { animation: pop 0.25s cubic-bezier(.22,.68,0,1.5); }
+
+#hydration-widget {
+  position: absolute;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  opacity: 0;
+  transition: opacity 0.4s ease, transform 0.4s ease;
+  background: rgba(56, 189, 248, 0.15);
+  backdrop-filter: blur(8px);
+  border-radius: 16px;
+  padding: 16px 24px;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  box-shadow: 0 0 30px rgba(56,189,248,0.3), 0 0 60px rgba(56,189,248,0.15);
+}
+#hydration-widget.in {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+#hydration-text {
+  font-size: 20px;
+  font-weight: 700;
+  color: black;
+  text-align: center;
+  text-shadow: 0 0 20px rgba(56,189,248,0.8);
+}#hydration-gif { width: 120px; height: 120px; object-fit: contain; }
+
+
+</style>
+</head>
+<body>
+
+<div id="hr-widget" class="hidden">
+  <span id="hr-icon">❤️</span>
+  <div>
+    <div id="hr-value">--</div>
+    <div id="hr-label">bpm</div>
+  </div>
+</div>
+
+<div id="squat-widget">
+  <div id="squat-count">0</div>
+  <div id="squat-done">0 făcuți</div>
+  <div id="squat-label">🏋️ squats rămași</div>
+</div>
+
+<div id="water-widget">
+  <span>💧</span>
+  <div>
+    <div id="water-count">0</div>
+    <div id="water-label">ape rămase</div>
+  </div>
+</div>
+
+<div id="hydration-widget">
+  <img id="hydration-gif" src="media/hydrate.gif" alt="" onerror="this.style.display='none'">
+  <div id="hydration-text">A băut apă! 💧</div>
+</div>
+
+<script>
+const WS_URL = "ws://localhost:8765";
+
+const hrWidget    = document.getElementById("hr-widget");
+const hrIcon      = document.getElementById("hr-icon");
+const hrValue     = document.getElementById("hr-value");
+const squatWidget = document.getElementById("squat-widget");
+const squatCount  = document.getElementById("squat-count");
+const squatDone   = document.getElementById("squat-done");
+const waterWidget = document.getElementById("water-widget");
+const waterCount  = document.getElementById("water-count");
+const hydrationWidget = document.getElementById("hydration-widget");
+const hydrationGif    = document.getElementById("hydration-gif");
+const hydrationText   = document.getElementById("hydration-text");
+
+let settings = { hr_monitor: true, squat_counter: true, hydration: true };
+let hydTimer = null;
+let prevWaterCount = null;
+
+function applySettings(s) {
+  settings = { ...settings, ...s };
+  hrWidget.classList.toggle("hidden", !settings.hr_monitor);
+}
+
+function updateHR(data) {
+  hrValue.textContent = data.hr;
+  hrWidget.className = settings.hr_monitor ? data.state : "hidden";
+  hrIcon.classList.remove("beat");
+  void hrIcon.offsetWidth;
+  hrIcon.classList.add("beat");
+}
+
+function updateSquat(data) {
+  const count = data.count ?? 0;
+  const done = data.done ?? 0;
+  squatCount.textContent = count;
+  squatDone.textContent = done + " făcuți";
+  if (count > 0 || done > 0) {
+    squatWidget.classList.add("visible");
+  } else {
+    squatWidget.classList.remove("visible");
+  }
+  squatCount.classList.remove("pop");
+  void squatCount.offsetWidth;
+  squatCount.classList.add("pop");
+}
+
+function updateHydration(data) {
+  const count = data.count ?? 0;
+  waterCount.textContent = count;
+  if (count > 0) {
+    waterWidget.classList.add("visible");
+  } else {
+    waterWidget.classList.remove("visible");
+  }
+  if (prevWaterCount !== null && count < prevWaterCount) {
+    showHydrationAlert("A băut apă! 💧");
+  }
+  prevWaterCount = count;
+  waterCount.classList.remove("pop");
+  void waterCount.offsetWidth;
+  waterCount.classList.add("pop");
+}
+
+function showHydrationAlert(label) {
+  if (!settings.hydration) return;
+  hydrationText.textContent = label;
+  const src = hydrationGif.src;
+  hydrationGif.src = "";
+  hydrationGif.src = src;
+  clearTimeout(hydTimer);
+  hydrationWidget.classList.add("in");
+  hydTimer = setTimeout(() => hydrationWidget.classList.remove("in"), 5000);
+}
+
+function onMessage(data) {
+  if (data.msg_type === "hr_update")        { updateHR(data); return; }
+  if (data.msg_type === "squat_update")     { updateSquat(data); return; }
+  if (data.msg_type === "hydration_update") { updateHydration(data); return; }
+  if (data.msg_type === "settings_update")  { applySettings(data.settings); return; }
+  if (data.type === "HYDRATION_CONFIRMED")  { showHydrationAlert(data.label || "A băut apă! 💧"); }
+}
+
+function connect() {
+  const ws = new WebSocket(WS_URL);
+  ws.onopen = () => console.log("[ws] connected");
+  ws.onmessage = e => { try { onMessage(JSON.parse(e.data)); } catch(err) { console.error(err); } };
+  ws.onclose = () => setTimeout(connect, 3000);
+  ws.onerror = () => ws.close();
+}
+
+connect();
+</script>
+</body>
+</html>
